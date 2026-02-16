@@ -637,9 +637,21 @@ Une partie complète dure entre 10 et 20 minutes selon les choix et le personnag
 
 ---
 
-## Auteurs
+## Équipe
 
-- **Votre Nom** - Développeur principal - [GitHub](https://github.com/votre-username)
+### Développeurs
+
+- **Souhila Kebdani** - Développeuse - [GitHub](https://github.com/souhila-kebdani)
+- **Yassine Ben Jeddou** - Développeur - [GitHub](https://github.com/yassine-benjeddou)
+- **Elyes Mohammed Chouchane** - Développeur - [GitHub](https://github.com/elyes-chouchane)
+
+### Rôles et responsabilités
+
+| Membre | Rôle principal | Modules |
+|--------|----------------|---------|
+| **Souhila Kebdani** | Architecture & Game Logic | GameState, Combat System |
+| **Yassine Ben Jeddou** | Character & Enemy System | Player, Character, Enemy |
+| **Elyes Mohammed Chouchane** | World & Items | Room, Door, Item |
 
 ### Contributeurs
 
@@ -687,15 +699,7 @@ Sous conditions de :
 
 ---
 
-## Contact
 
-Pour toute question, suggestion ou signalement de bug :
-
-- **Email** : votre.email@example.com
-- **Issues** : [GitHub Issues](https://github.com/votre-username/labyrinth-game/issues)
-- **Discussions** : [GitHub Discussions](https://github.com/votre-username/labyrinth-game/discussions)
-
----
 
 ## Changelog
 
