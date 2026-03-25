@@ -27,7 +27,11 @@ impl Chambre {
             "La Sortie Espérée",
         ];
 
-        let nom = noms.get(id).unwrap_or(&format!("Chambre {}", id + 1)).to_string();
+               let nom = if id < noms.len() {
+            noms[id].to_string()
+        } else {
+            format!("Chambre {}", id + 1)
+        };
 
         let mut zones = Vec::new();
         for i in 0..12 {
