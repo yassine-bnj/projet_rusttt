@@ -1,5 +1,6 @@
 use crate::entities::ennemi::Ennemi;
 use crate::entities::objet::Objet;
+use crate::world::porte::Porte;
 
 #[derive(Debug, Clone)]
 pub struct Zone {
@@ -10,6 +11,7 @@ pub struct Zone {
     pub est_occupee: bool,
     pub ennemi: Option<Ennemi>,
     pub objet: Option<Objet>,
+    pub porte: Option<Porte>,
 }
 
 impl Zone {
@@ -22,6 +24,7 @@ impl Zone {
             est_occupee: false,
             ennemi: None,
             objet: None,
+            porte: None,
         }
     }
 

@@ -1,4 +1,6 @@
 use crate::world::chambre::Chambre;
+use crate::world::porte::Porte;
+use rand::Rng;
 
 #[derive(Debug, Clone)]
 pub struct Labyrinthe {
@@ -26,8 +28,63 @@ impl Labyrinthe {
     }
 
     pub fn generer(&mut self) {
+        // Générer contenu de chaque chambre
         for chambre in &mut self.chambres {
             chambre.generer_contenu();
+        }
+
+        // Générer des portes entre chambres adjacentes (droite et bas)
+        let mut rng = rand::thread_rng();
+        let total = self.chambres.len();
+
+        for i in 0..total {
+            let row = i / self.largeur;
+            let col = i % self.largeur;
+
+            // Voisin à droite
+            if col + 1 < self.largeur {
+                let dest = i + 1;
+                let src_zone = if i == 0 { 0 } else { rng.gen_range(0..12) };
+                let dst_zone = rng.gen_range(0..12);
+                let porte = Porte::nouveau(dest, dst_zone);
+
+                // Mutably borrow distinct slices to modify both chambres
+                let (left, right) = self.chambres.split_at_mut(dest);
+                let src_ch = &mut left[i];
+                let dst_ch = &mut right[0];
+
+                src_ch.portes.push(porte.clone());
+                dst_ch.portes.push(Porte::nouveau(i, src_zone));
+
+                if let Some(zone) = src_ch.get_zone_mut(src_zone) {
+                    zone.porte = Some(porte.clone());
+                }
+                if let Some(zone) = dst_ch.get_zone_mut(dst_zone) {
+                    zone.porte = Some(Porte::nouveau(i, src_zone));
+                }
+            }
+
+            // Voisin en bas
+            if row + 1 < self.hauteur {
+                let dest = i + self.largeur;
+                let src_zone = if i == 0 { 0 } else { rng.gen_range(0..12) };
+                let dst_zone = rng.gen_range(0..12);
+                let porte = Porte::nouveau(dest, dst_zone);
+
+                let (left, right) = self.chambres.split_at_mut(dest);
+                let src_ch = &mut left[i];
+                let dst_ch = &mut right[0];
+
+                src_ch.portes.push(porte.clone());
+                dst_ch.portes.push(Porte::nouveau(i, src_zone));
+
+                if let Some(zone) = src_ch.get_zone_mut(src_zone) {
+                    zone.porte = Some(porte.clone());
+                }
+                if let Some(zone) = dst_ch.get_zone_mut(dst_zone) {
+                    zone.porte = Some(Porte::nouveau(i, src_zone));
+                }
+            }
         }
     }
 

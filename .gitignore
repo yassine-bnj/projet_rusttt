@@ -1,0 +1,59 @@
+# Rust
+/target/
+**/target/
+/Cargo.lock
+
+# Binaries
+*.exe
+*.dll
+*.so
+*.dylib
+*.pdb
+*.lib
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+
+# Editor directories and files
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln
+*.swp
+*.bak
+*.tmp
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# Environment files
+.env
+.env.*.local
+
+# Project notes
+/guide.txt
+
+# Build artifacts and temp
+/target/
+**/target/
+/build/
+
+# Python
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+
+# Misc
+*.old
+*.orig
