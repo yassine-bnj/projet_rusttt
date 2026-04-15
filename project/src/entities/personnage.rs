@@ -92,4 +92,24 @@ impl Personnage {
         println!(" Position: Chambre {}, Zone {}", self.chambre_actuelle + 1, self.zone_actuelle + 1);
         println!("----------------------------------\n");
     }
+
+    pub fn deplacer_zone(&mut self, nouvelle_zone: usize) {
+    // ✅ Déplacement entre zones : NE CONSOMME PAS DE PA
+    self.zone_actuelle = nouvelle_zone;
+    println!("🚶 Vous vous déplacez vers la zone {}...", nouvelle_zone + 1);
+}
+
+pub fn traverser_porte(&mut self, cout_pa: i32, cout_pv: i32) -> bool {
+    // ✅ Traverser une porte : CONSOMME PA et PV
+    if self.points_action >= cout_pa && self.pv > cout_pv {
+        self.points_action -= cout_pa;
+        self.pv -= cout_pv;
+        println!("🚪 Vous traversez la porte (-{} PA, -{} PV)", cout_pa, cout_pv);
+        true
+    } else {
+        println!("❌ Impossible de traverser ! PA: {}/{}, PV: {}/{}", 
+                 self.points_action, cout_pa, self.pv, cout_pv);
+        false
+    }
+}
 }
