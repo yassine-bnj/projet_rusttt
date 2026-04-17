@@ -1,5 +1,5 @@
 use crate::world::chambre::Chambre;
-use crate::world::porte::Porte;
+use crate::world::porte::{CoteMur, Porte};
 use rand::Rng;
 
 #[derive(Debug, Clone)]
@@ -33,7 +33,7 @@ impl Labyrinthe {
             chambre.generer_contenu();
         }
 
-        // Générer des portes entre chambres adjacentes (droite et bas)
+        // Générer des portes entre chambres adjacentes, attachées aux murs
         let mut rng = rand::thread_rng();
         let total = self.chambres.len();
 
@@ -44,74 +44,37 @@ impl Labyrinthe {
             // Voisin à droite
             if col + 1 < self.largeur {
                 let dest = i + 1;
-                let src_zone = Self::zone_libre_pour_porte(&self.chambres[i], &mut rng);
-                let dst_zone = Self::zone_libre_pour_porte(&self.chambres[dest], &mut rng);
+                let src_zone = rng.gen_range(0..self.chambres[i].zones.len());
+                let dst_zone = rng.gen_range(0..self.chambres[dest].zones.len());
 
-                let (src_zone, dst_zone) = match (src_zone, dst_zone) {
-                    (Some(src_zone), Some(dst_zone)) => (src_zone, dst_zone),
-                    _ => continue,
-                };
-
-                let porte = Porte::nouveau(dest, dst_zone);
+                let porte = Porte::nouveau(dest, dst_zone, CoteMur::Est);
+                let porte_retour = Porte::nouveau(i, src_zone, CoteMur::Est.oppose());
 
                 // Mutably borrow distinct slices to modify both chambres
                 let (left, right) = self.chambres.split_at_mut(dest);
                 let src_ch = &mut left[i];
                 let dst_ch = &mut right[0];
 
-                src_ch.portes.push(porte.clone());
-                dst_ch.portes.push(Porte::nouveau(i, src_zone));
-
-                if let Some(zone) = src_ch.get_zone_mut(src_zone) {
-                    zone.porte = Some(porte.clone());
-                }
-                if let Some(zone) = dst_ch.get_zone_mut(dst_zone) {
-                    zone.porte = Some(Porte::nouveau(i, src_zone));
-                }
+                src_ch.ajouter_porte(porte);
+                dst_ch.ajouter_porte(porte_retour);
             }
 
             // Voisin en bas
             if row + 1 < self.hauteur {
                 let dest = i + self.largeur;
-                let src_zone = Self::zone_libre_pour_porte(&self.chambres[i], &mut rng);
-                let dst_zone = Self::zone_libre_pour_porte(&self.chambres[dest], &mut rng);
+                let src_zone = rng.gen_range(0..self.chambres[i].zones.len());
+                let dst_zone = rng.gen_range(0..self.chambres[dest].zones.len());
 
-                let (src_zone, dst_zone) = match (src_zone, dst_zone) {
-                    (Some(src_zone), Some(dst_zone)) => (src_zone, dst_zone),
-                    _ => continue,
-                };
-
-                let porte = Porte::nouveau(dest, dst_zone);
+                let porte = Porte::nouveau(dest, dst_zone, CoteMur::Sud);
+                let porte_retour = Porte::nouveau(i, src_zone, CoteMur::Sud.oppose());
 
                 let (left, right) = self.chambres.split_at_mut(dest);
                 let src_ch = &mut left[i];
                 let dst_ch = &mut right[0];
 
-                src_ch.portes.push(porte.clone());
-                dst_ch.portes.push(Porte::nouveau(i, src_zone));
-
-                if let Some(zone) = src_ch.get_zone_mut(src_zone) {
-                    zone.porte = Some(porte.clone());
-                }
-                if let Some(zone) = dst_ch.get_zone_mut(dst_zone) {
-                    zone.porte = Some(Porte::nouveau(i, src_zone));
-                }
+                src_ch.ajouter_porte(porte);
+                dst_ch.ajouter_porte(porte_retour);
             }
-        }
-    }
-
-    fn zone_libre_pour_porte(chambre: &Chambre, rng: &mut impl Rng) -> Option<usize> {
-        let zones_libres: Vec<usize> = chambre
-            .zones
-            .iter()
-            .enumerate()
-            .filter_map(|(index, zone)| if zone.porte.is_none() { Some(index) } else { None })
-            .collect();
-
-        if zones_libres.is_empty() {
-            None
-        } else {
-            Some(zones_libres[rng.gen_range(0..zones_libres.len())])
         }
     }
 

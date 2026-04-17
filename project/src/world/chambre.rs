@@ -81,4 +81,8 @@ impl Chambre {
     pub fn get_zone_mut(&mut self, id: usize) -> Option<&mut Zone> {
         self.zones.get_mut(id)
     }
+
+    pub fn ajouter_porte(&mut self, porte: Porte) {
+        self.portes.push(porte);
+    }
 }

@@ -1,6 +1,7 @@
 use crate::entities::personnage::Personnage;
 use crate::world::labyrinthe::Labyrinthe;
 use crate::world::chambre::Chambre;
+use crate::world::porte::CoteMur;
 
 pub struct GameEngine {
     pub personnage: Personnage,
@@ -107,8 +108,6 @@ fn afficher_chambre_matrice(&mut self) {
                             crate::entities::objet::TypeObjet::CleMystique => "  🔑  ",
                             crate::entities::objet::TypeObjet::BouclierSpectral => "  🛡️  ",
                         }
-                    } else if zone.porte.is_some() {
-                        "  🚪  "  // Porte
                     } else if zone.est_visitee {
                         "  ··  "  // Zone visitée (vide)
                     } else {
@@ -131,7 +130,7 @@ fn afficher_chambre_matrice(&mut self) {
         // Légende
         println!("\n📍 LÉGENDE :");
         println!("   👤 = Votre position  │  ⚔️ = Ennemi  │  💀 = Ennemi vaincu");
-        println!("   🧪 = Potion  │  🔑 = Clé  │  🛡️ = Bouclier  │  🚪 = Porte");
+        println!("   🧪 = Potion  │  🔑 = Clé  │  🛡️ = Bouclier");
         println!("   ·· = Visitée  │  ░░ = Non explorée");
         
         // Directions possibles
@@ -147,10 +146,8 @@ fn afficher_chambre_matrice(&mut self) {
         if colonne < 3 { directions.push("[E] Est"); }
         
         // Vérifier porte
-        if let Some(zone) = chambre.get_zone(zone_id) {
-            if zone.porte.is_some() {
-                directions.push("[P] Porte");
-            }
+        if !chambre.portes.is_empty() {
+            directions.push("[P] Porte");
         }
         
         println!("   {}", directions.join("  │  "));
@@ -283,6 +280,20 @@ fn afficher_contenu_zone(&mut self) {
                 println!("\n✨  Vous voyez : {} - {}", objet.nom, objet.description);
                 println!("   Tapez [ramasser] pour le prendre");
             }
+
+                if !chambre.portes.is_empty() {
+                    println!("\n🚪  Portes disponibles sur les murs :");
+                    for porte in &chambre.portes {
+                        println!(
+                            "   - {} → Chambre {} (Coût: {} PA, {} PV)",
+                            porte.cote_mur.etiquette(),
+                            porte.chambre_destination + 1,
+                            porte.cout_pa,
+                            porte.cout_pv
+                        );
+                    }
+                    println!("   Tapez [p] pour choisir une porte");
+                }
         }
     }
 }
@@ -523,27 +534,73 @@ fn lancer_combat(&mut self, zone_dest: usize) {
 
 fn traverser_porte(&mut self) {
     let chambre_id = self.personnage.chambre_actuelle;
-    let zone_id = self.personnage.zone_actuelle;
-
+    
+    // Récupérer la chambre et vérifier les portes disponibles
     if let Some(chambre) = self.labyrinthe.get_chambre(chambre_id) {
-        if let Some(zone) = chambre.get_zone(zone_id) {
-            if let Some(porte) = &zone.porte {
-                // ✅ Vérifier si le joueur a assez de PA et PV
-                if self.personnage.traverser_porte(porte.cout_pa, porte.cout_pv) {
-                    // ✅ Changer de chambre
-                    self.personnage.chambre_actuelle = porte.chambre_destination;
-                    self.personnage.zone_actuelle = porte.zone_destination;
-                    
-                    println!("✅ Vous entrez dans la chambre {} !", porte.chambre_destination + 1);
-                    
-                    // Régénérer les PA (optionnel, selon tes règles)
+        if chambre.portes.is_empty() {
+            println!("🚫 Il n'y a pas de porte sur les murs de cette chambre.");
+            return;
+        }
+
+        // Déterminer quelle porte emprunter
+        let porte_destination: Option<usize> = if chambre.portes.len() == 1 {
+            // Seule une porte : l'utiliser directement
+            Some(0)
+        } else {
+            // Plusieurs portes : laisser choisir le joueur
+            println!("\n🚪 Choisis une porte par direction :");
+            for (idx, porte) in chambre.portes.iter().enumerate() {
+                println!(
+                    "   [{}] {} → Chambre {}",
+                    match porte.cote_mur {
+                        CoteMur::Nord => "n",
+                        CoteMur::Sud => "s",
+                        CoteMur::Est => "e",
+                        CoteMur::Ouest => "o",
+                    },
+                    porte.cote_mur.etiquette(),
+                    porte.chambre_destination + 1
+                );
+            }
+            print!("\n> ");
+
+            let mut input = String::new();
+            std::io::stdin().read_line(&mut input).unwrap();
+            let input = input.trim().to_lowercase();
+
+            let cote = match input.as_str() {
+                "n" => Some(CoteMur::Nord),
+                "s" => Some(CoteMur::Sud),
+                "e" => Some(CoteMur::Est),
+                "o" => Some(CoteMur::Ouest),
+                _ => None,
+            };
+
+            cote.and_then(|cote| {
+                chambre.portes.iter().position(|porte| porte.cote_mur == cote)
+            })
+        };
+
+        if let Some(porte_idx) = porte_destination {
+            if porte_idx < chambre.portes.len() {
+                let porte = &chambre.portes[porte_idx];
+                let chambre_dest = porte.chambre_destination;
+                let zone_dest = porte.zone_destination;
+                let cout_pa = porte.cout_pa;
+                let cout_pv = porte.cout_pv;
+                let cote = porte.cote_mur;
+
+                if self.personnage.traverser_porte(cout_pa, cout_pv) {
+                    self.personnage.chambre_actuelle = chambre_dest;
+                    self.personnage.zone_actuelle = zone_dest;
                     self.personnage.points_action = self.personnage.points_action_max;
-                    
+
+                    println!("✅ Vous passez par la porte {} vers la chambre {} !", cote.etiquette(), chambre_dest + 1);
                     self.afficher_zone_actuelle();
                 }
-            } else {
-                println!("🚫 Il n'y a pas de porte dans cette zone.");
             }
+        } else {
+            println!("🚫 Direction invalide ou porte introuvable.");
         }
     }
 }
