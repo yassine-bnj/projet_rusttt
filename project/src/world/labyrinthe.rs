@@ -44,8 +44,14 @@ impl Labyrinthe {
             // Voisin à droite
             if col + 1 < self.largeur {
                 let dest = i + 1;
-                let src_zone = if i == 0 { 0 } else { rng.gen_range(0..12) };
-                let dst_zone = rng.gen_range(0..12);
+                let src_zone = Self::zone_libre_pour_porte(&self.chambres[i], &mut rng);
+                let dst_zone = Self::zone_libre_pour_porte(&self.chambres[dest], &mut rng);
+
+                let (src_zone, dst_zone) = match (src_zone, dst_zone) {
+                    (Some(src_zone), Some(dst_zone)) => (src_zone, dst_zone),
+                    _ => continue,
+                };
+
                 let porte = Porte::nouveau(dest, dst_zone);
 
                 // Mutably borrow distinct slices to modify both chambres
@@ -67,8 +73,14 @@ impl Labyrinthe {
             // Voisin en bas
             if row + 1 < self.hauteur {
                 let dest = i + self.largeur;
-                let src_zone = if i == 0 { 0 } else { rng.gen_range(0..12) };
-                let dst_zone = rng.gen_range(0..12);
+                let src_zone = Self::zone_libre_pour_porte(&self.chambres[i], &mut rng);
+                let dst_zone = Self::zone_libre_pour_porte(&self.chambres[dest], &mut rng);
+
+                let (src_zone, dst_zone) = match (src_zone, dst_zone) {
+                    (Some(src_zone), Some(dst_zone)) => (src_zone, dst_zone),
+                    _ => continue,
+                };
+
                 let porte = Porte::nouveau(dest, dst_zone);
 
                 let (left, right) = self.chambres.split_at_mut(dest);
@@ -85,6 +97,21 @@ impl Labyrinthe {
                     zone.porte = Some(Porte::nouveau(i, src_zone));
                 }
             }
+        }
+    }
+
+    fn zone_libre_pour_porte(chambre: &Chambre, rng: &mut impl Rng) -> Option<usize> {
+        let zones_libres: Vec<usize> = chambre
+            .zones
+            .iter()
+            .enumerate()
+            .filter_map(|(index, zone)| if zone.porte.is_none() { Some(index) } else { None })
+            .collect();
+
+        if zones_libres.is_empty() {
+            None
+        } else {
+            Some(zones_libres[rng.gen_range(0..zones_libres.len())])
         }
     }
 
