@@ -1,4 +1,5 @@
 use crate::entities::personnage::Personnage;
+use crate::entities::personnage::ClassePersonnage;
 use crate::world::labyrinthe::Labyrinthe;
 use crate::world::chambre::Chambre;
 use crate::world::porte::CoteMur;
@@ -62,13 +63,13 @@ fn afficher_zone_actuelle(&mut self) {
 
     if let Some(chambre) = self.labyrinthe.get_chambre(chambre_id) {
         if let Some(zone) = chambre.get_zone(zone_id) {
+            // On garde juste un message minimal, l'illustration matrice gère le visuel.
             zone.afficher_contenu(false);
-            
-            // ✅ Afficher les déplacements possibles
-            self.afficher_deplacements_possibles(chambre, zone_id);
+            self.afficher_chambre_matrice();
         }
     }
 }
+
 
 fn afficher_chambre_matrice(&mut self) {
     let chambre_id = self.personnage.chambre_actuelle;
@@ -303,6 +304,7 @@ fn gerer_input(&mut self) {
     println!("\n┌────────────────────────────────────────────────┐");
     println!("│  [n/s/e/o] Déplacer  │  [p] Porte            │");
     println!("│  [r] Regarder        │  [i] Inventaire       │");
+    println!("│  [u] Capacité        │  [objet] Utiliser     │");
     println!("│  [c] Combattre       │  [f] Fuir             │");
     println!("│  [ramasser] Objet    │  [q] Quitter          │");
     println!("└────────────────────────────────────────────────┘");
@@ -317,17 +319,35 @@ fn gerer_input(&mut self) {
         "p" => self.traverser_porte(),
         "r" => self.regarder(),
         "i" => self.afficher_inventaire(),
+        "u" => self.utiliser_capacite_speciale(),
+        "objet" => self.utiliser_objet(),
         "c" => self.combattre(),
         "f" => self.fuir(),
         "ramasser" => self.ramasser_objet(),
         "q" => self.partie_terminee = true,
         _ => println!("Commande inconnue."),
     }
+
+    self.verifier_conditions_fin();
 }
 
 fn combattre(&mut self) {
     let chambre_id = self.personnage.chambre_actuelle;
     let zone_id = self.personnage.zone_actuelle;
+
+    let est_spectre = self.labyrinthe
+        .get_chambre(chambre_id)
+        .and_then(|chambre| chambre.get_zone(zone_id))
+        .and_then(|zone| zone.ennemi.as_ref())
+        .map_or(false, |ennemi| {
+            !ennemi.est_vaincu
+                && ennemi.tipe == crate::entities::ennemi::TypeEnnemi::SpectreEnigmatique
+        });
+
+    if est_spectre {
+        self.combattre_spectre();
+        return;
+    }
 
     if let Some(chambre) = self.labyrinthe.get_chambre_mut(chambre_id) {
         if let Some(zone) = chambre.get_zone_mut(zone_id) {
