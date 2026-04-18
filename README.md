@@ -1,7 +1,7 @@
 
 # LE LABYRINTHE DES ÂMES PERDUES
 
-Un jeu de rôle textuel stratégique développé en Rust, où l'intelligence et la planification priment sur le hasard. Le joueur incarne un personnage piégé dans un donjon maudit et doit trouver la sortie avant que ses points de vie ne s'épuisent.
+Un jeu de rôle textuel stratégique développé en Rust, où l'exploration, la gestion des ressources et l'adaptation guident la progression. Le joueur incarne un personnage piégé dans un donjon maudit généré à chaque partie et doit trouver la sortie avant que ses points de vie ne s'épuisent.
 
 **Genre :** RPG Stratégique / Dungeon Crawler  
 **Langage :** Rust  
@@ -30,13 +30,13 @@ Un jeu de rôle textuel stratégique développé en Rust, où l'intelligence et 
 
 ## Description
 
-Le Labyrinthe des Âmes Perdues est un dungeon crawler où chaque décision compte. Contrairement aux jeux basés sur le hasard, chaque action a des conséquences prévisibles et mesurables. Le joueur doit gérer ses ressources limitées (Points de Vie et Points d'Action) tout en naviguant dans un labyrinthe rempli d'ennemis, d'énigmes et de pièges.
+Le Labyrinthe des Âmes Perdues est un dungeon crawler où chaque décision compte. La disposition du labyrinthe, des ennemis et des objets peut changer d'une partie à l'autre, mais les actions du joueur ont des conséquences claires sur ses ressources. Le joueur doit gérer ses Points de Vie et ses Points d'Action tout en naviguant dans un labyrinthe rempli d'ennemis, d'énigmes et de pièges.
 
 ---
 
 ## Caractéristiques
 
-- **Gameplay stratégique** : Aucun élément aléatoire, chaque décision impacte le résultat
+- **Gameplay stratégique** : Labyrinthe généré aléatoirement, décisions du joueur déterminantes
 - **Trois personnages uniques** avec des capacités spéciales distinctes
 - **Système de ressources** : Gestion des Points d'Action (PA) et Points de Vie (PV)
 - **Combat tactique** : Choix stratégiques avec conséquences variables
@@ -629,7 +629,7 @@ Un éditeur de labyrinthes est prévu pour une version future. Pour l'instant, l
 
 ### Le jeu est-il vraiment sans hasard ?
 
-Oui, absolument. Tous les résultats sont déterministes et basés uniquement sur les choix du joueur. Deux parties avec les mêmes décisions auront le même résultat.
+Non. La version actuelle utilise une génération aléatoire pour varier les chambres, les portes, les ennemis et les objets. Les choix du joueur restent stratégiques, mais deux parties ne produisent pas forcément le même parcours.
 
 ### Combien de temps dure une partie ?
 

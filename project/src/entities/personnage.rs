@@ -30,8 +30,8 @@ impl Personnage {
             classe,
             pv,
             pv_max: pv,
-            points_action: 3,
-            points_action_max: 3,
+            points_action: 12,
+            points_action_max: 12,
             inventaire: Inventaire::nouveau(10),
             capacite_restante: capacite_max,
             chambre_actuelle: 0,
@@ -45,11 +45,11 @@ impl Personnage {
     }
 
     pub fn seraph() -> Self {
-        Personnage::nouveau("Seraph", ClassePersonnage::Seraph, 15, 2)
+        Personnage::nouveau("Seraph", ClassePersonnage::Seraph, 18, 2)
     }
 
     pub fn rook() -> Self {
-        Personnage::nouveau("Rook", ClassePersonnage::Rook, 15, 3)
+        Personnage::nouveau("Rook", ClassePersonnage::Rook, 14, 3)
     }
 
     pub fn subir_degats(&mut self, degats: i32) -> bool {
