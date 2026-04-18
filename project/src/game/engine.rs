@@ -396,6 +396,218 @@ fn combattre(&mut self) {
     }
 }
 
+fn utiliser_capacite_speciale(&mut self) {
+    match self.personnage.classe {
+        ClassePersonnage::Kael => self.utiliser_vision(),
+        ClassePersonnage::Seraph => self.utiliser_elimination(),
+        ClassePersonnage::Rook => self.utiliser_crochetage(),
+    }
+}
+
+fn utiliser_vision(&mut self) {
+    if !self.personnage.utiliser_capacite() {
+        return;
+    }
+
+    let chambre_id = self.personnage.chambre_actuelle;
+    let zone_id = self.personnage.zone_actuelle;
+
+    if let Some(chambre) = self.labyrinthe.get_chambre(chambre_id) {
+        println!("\nVision de Kael :");
+        let colonne = zone_id % 4;
+        let ligne = zone_id / 4;
+        let voisins = [
+            ("Nord", ligne > 0, zone_id.wrapping_sub(4)),
+            ("Sud", ligne < 2, zone_id + 4),
+            ("Ouest", colonne > 0, zone_id.wrapping_sub(1)),
+            ("Est", colonne < 3, zone_id + 1),
+        ];
+
+        for (direction, possible, voisin_id) in voisins {
+            if !possible {
+                continue;
+            }
+
+            if let Some(zone) = chambre.get_zone(voisin_id) {
+                if let Some(ennemi) = &zone.ennemi {
+                    if !ennemi.est_vaincu {
+                        println!("   {} -> Zone {} avec {}", direction, voisin_id + 1, ennemi.nom);
+                        continue;
+                    }
+                }
+
+                if let Some(objet) = &zone.objet {
+                    println!("   {} -> Zone {} avec {}", direction, voisin_id + 1, objet.nom);
+                } else {
+                    println!("   {} -> Zone {} vide", direction, voisin_id + 1);
+                }
+            }
+        }
+    }
+}
+
+fn utiliser_elimination(&mut self) {
+    let chambre_id = self.personnage.chambre_actuelle;
+    let zone_id = self.personnage.zone_actuelle;
+    let ennemi_present = self.labyrinthe
+        .get_chambre(chambre_id)
+        .and_then(|chambre| chambre.get_zone(zone_id))
+        .and_then(|zone| zone.ennemi.as_ref())
+        .map_or(false, |ennemi| !ennemi.est_vaincu);
+
+    if !ennemi_present {
+        println!("Aucun ennemi à éliminer ici.");
+        return;
+    }
+
+    if !self.personnage.utiliser_capacite() {
+        return;
+    }
+
+    if let Some(chambre) = self.labyrinthe.get_chambre_mut(chambre_id) {
+        if let Some(zone) = chambre.get_zone_mut(zone_id) {
+            if let Some(ennemi) = &mut zone.ennemi {
+                ennemi.est_vaincu = true;
+                ennemi.pv = 0;
+                zone.est_occupee = false;
+                println!("Seraph élimine {} sans perdre de PV.", ennemi.nom);
+            }
+        }
+    }
+}
+
+fn utiliser_crochetage(&mut self) {
+    let chambre_id = self.personnage.chambre_actuelle;
+    let porte_idx = self.choisir_porte_index(chambre_id);
+
+    if let Some(porte_idx) = porte_idx {
+        if !self.personnage.utiliser_capacite() {
+            return;
+        }
+        self.traverser_porte_index(porte_idx, true);
+    }
+}
+
+fn utiliser_objet(&mut self) {
+    if self.personnage.inventaire.objets.is_empty() {
+        println!("Inventaire vide.");
+        return;
+    }
+
+    self.personnage.inventaire.afficher();
+    println!("Choisis un objet à utiliser :");
+    print!("> ");
+
+    let mut input = String::new();
+    std::io::stdin().read_line(&mut input).unwrap();
+    let choix = input.trim().parse::<usize>().ok();
+
+    let Some(index) = choix.and_then(|n| n.checked_sub(1)) else {
+        println!("Choix invalide.");
+        return;
+    };
+
+    if index >= self.personnage.inventaire.objets.len() {
+        println!("Objet introuvable.");
+        return;
+    }
+
+    let tipe = self.personnage.inventaire.objets[index].tipe;
+
+    match tipe {
+        crate::entities::objet::TypeObjet::PotionDeVie => {
+            let soin = self.personnage.inventaire.objets[index].utiliser().unwrap_or(0);
+            self.personnage.soigner(soin);
+            println!("Potion de Vie utilisée.");
+        }
+        crate::entities::objet::TypeObjet::CleMystique => {
+            let chambre_id = self.personnage.chambre_actuelle;
+            if let Some(porte_idx) = self.choisir_porte_index(chambre_id) {
+                self.personnage.inventaire.objets[index].utiliser();
+                self.traverser_porte_index(porte_idx, true);
+                println!("Clé Mystique utilisée.");
+            }
+        }
+        crate::entities::objet::TypeObjet::BouclierSpectral => {
+            println!("Le Bouclier Spectral s'active automatiquement lors de la prochaine attaque.");
+        }
+    }
+
+    self.personnage.inventaire.objets.retain(|objet| !objet.est_utilise);
+}
+
+fn combattre_spectre(&mut self) {
+    let chambre_id = self.personnage.chambre_actuelle;
+    let zone_id = self.personnage.zone_actuelle;
+
+    if let Some(spectre) = self.labyrinthe
+        .get_chambre(chambre_id)
+        .and_then(|chambre| chambre.get_zone(zone_id))
+        .and_then(|zone| zone.ennemi.as_ref())
+    {
+        spectre.afficher_enigme();
+    }
+
+    loop {
+        print!("\nRéponse > ");
+        let mut input = String::new();
+        std::io::stdin().read_line(&mut input).unwrap();
+        let choix = input.trim().parse::<usize>().unwrap_or(0);
+
+        let bonne_reponse = self.labyrinthe
+            .get_chambre(chambre_id)
+            .and_then(|chambre| chambre.get_zone(zone_id))
+            .and_then(|zone| zone.ennemi.as_ref())
+            .map_or(false, |spectre| spectre.verifier_reponse(choix.saturating_sub(1)));
+
+        if bonne_reponse {
+            println!("L'énigme se dissipe. Le Spectre passe au combat final.");
+            break;
+        }
+
+        self.personnage.subir_degats(8);
+        println!("Mauvaise réponse : -8 PV.");
+        if !self.personnage.est_vivant {
+            return;
+        }
+    }
+
+    println!("\nPhase 2 :");
+    println!("1 - Attaque directe (-6 PV)");
+    println!("2 - Défense puis riposte (-3 PV)");
+    println!("3 - Feinte puis frappe fatale (-2 PV)");
+    print!("> ");
+
+    let mut input = String::new();
+    std::io::stdin().read_line(&mut input).unwrap();
+    let degats = match input.trim() {
+        "1" => 6,
+        "2" => 3,
+        "3" => 2,
+        _ => {
+            println!("Hésitation fatale : le Spectre frappe violemment.");
+            6
+        }
+    };
+
+    self.personnage.subir_degats(degats);
+    if !self.personnage.est_vivant {
+        return;
+    }
+
+    if let Some(chambre) = self.labyrinthe.get_chambre_mut(chambre_id) {
+        if let Some(zone) = chambre.get_zone_mut(zone_id) {
+            if let Some(ennemi) = &mut zone.ennemi {
+                ennemi.est_vaincu = true;
+                ennemi.pv = 0;
+                zone.est_occupee = false;
+            }
+        }
+    }
+
+    println!("Le Spectre est vaincu.");
+}
+
 fn fuir(&mut self) {
     let chambre_id = self.personnage.chambre_actuelle;
     let zone_id = self.personnage.zone_actuelle;
@@ -554,74 +766,87 @@ fn lancer_combat(&mut self, zone_dest: usize) {
 
 fn traverser_porte(&mut self) {
     let chambre_id = self.personnage.chambre_actuelle;
-    
-    // Récupérer la chambre et vérifier les portes disponibles
-    if let Some(chambre) = self.labyrinthe.get_chambre(chambre_id) {
-        if chambre.portes.is_empty() {
-            println!("🚫 Il n'y a pas de porte sur les murs de cette chambre.");
-            return;
-        }
+    if let Some(porte_idx) = self.choisir_porte_index(chambre_id) {
+        self.traverser_porte_index(porte_idx, false);
+    }
+}
 
-        // Déterminer quelle porte emprunter
-        let porte_destination: Option<usize> = if chambre.portes.len() == 1 {
-            // Seule une porte : l'utiliser directement
-            Some(0)
-        } else {
-            // Plusieurs portes : laisser choisir le joueur
-            println!("\n🚪 Choisis une porte par direction :");
-            for (idx, porte) in chambre.portes.iter().enumerate() {
-                println!(
-                    "   [{}] {} → Chambre {}",
-                    match porte.cote_mur {
-                        CoteMur::Nord => "n",
-                        CoteMur::Sud => "s",
-                        CoteMur::Est => "e",
-                        CoteMur::Ouest => "o",
-                    },
-                    porte.cote_mur.etiquette(),
-                    porte.chambre_destination + 1
-                );
-            }
-            print!("\n> ");
+fn choisir_porte_index(&self, chambre_id: usize) -> Option<usize> {
+    let Some(chambre) = self.labyrinthe.get_chambre(chambre_id) else {
+        return None;
+    };
 
-            let mut input = String::new();
-            std::io::stdin().read_line(&mut input).unwrap();
-            let input = input.trim().to_lowercase();
+    if chambre.portes.is_empty() {
+        println!("🚫 Il n'y a pas de porte sur les murs de cette chambre.");
+        return None;
+    }
 
-            let cote = match input.as_str() {
-                "n" => Some(CoteMur::Nord),
-                "s" => Some(CoteMur::Sud),
-                "e" => Some(CoteMur::Est),
-                "o" => Some(CoteMur::Ouest),
-                _ => None,
-            };
+    if chambre.portes.len() == 1 {
+        return Some(0);
+    }
 
-            cote.and_then(|cote| {
-                chambre.portes.iter().position(|porte| porte.cote_mur == cote)
-            })
-        };
+    println!("\n🚪 Choisis une porte par direction :");
+    for porte in &chambre.portes {
+        println!(
+            "   [{}] {} → Chambre {}",
+            match porte.cote_mur {
+                CoteMur::Nord => "n",
+                CoteMur::Sud => "s",
+                CoteMur::Est => "e",
+                CoteMur::Ouest => "o",
+            },
+            porte.cote_mur.etiquette(),
+            porte.chambre_destination + 1
+        );
+    }
+    print!("\n> ");
 
-        if let Some(porte_idx) = porte_destination {
-            if porte_idx < chambre.portes.len() {
-                let porte = &chambre.portes[porte_idx];
-                let chambre_dest = porte.chambre_destination;
-                let zone_dest = porte.zone_destination;
-                let cout_pa = porte.cout_pa;
-                let cout_pv = porte.cout_pv;
-                let cote = porte.cote_mur;
+    let mut input = String::new();
+    std::io::stdin().read_line(&mut input).unwrap();
+    let input = input.trim().to_lowercase();
 
-                if self.personnage.traverser_porte(cout_pa, cout_pv) {
-                    self.personnage.chambre_actuelle = chambre_dest;
-                    self.personnage.zone_actuelle = zone_dest;
-                    self.personnage.points_action = self.personnage.points_action_max;
+    let cote = match input.as_str() {
+        "n" => Some(CoteMur::Nord),
+        "s" => Some(CoteMur::Sud),
+        "e" => Some(CoteMur::Est),
+        "o" => Some(CoteMur::Ouest),
+        _ => None,
+    };
 
-                    println!("✅ Vous passez par la porte {} vers la chambre {} !", cote.etiquette(), chambre_dest + 1);
-                    self.afficher_zone_actuelle();
-                }
-            }
-        } else {
-            println!("🚫 Direction invalide ou porte introuvable.");
-        }
+    let porte_idx = cote.and_then(|cote| {
+        chambre.portes.iter().position(|porte| porte.cote_mur == cote)
+    });
+
+    if porte_idx.is_none() {
+        println!("🚫 Direction invalide ou porte introuvable.");
+    }
+
+    porte_idx
+}
+
+fn traverser_porte_index(&mut self, porte_idx: usize, gratuit: bool) {
+    let chambre_id = self.personnage.chambre_actuelle;
+    let Some(chambre) = self.labyrinthe.get_chambre(chambre_id) else {
+        return;
+    };
+
+    let Some(porte) = chambre.portes.get(porte_idx) else {
+        println!("🚫 Porte introuvable.");
+        return;
+    };
+
+    let chambre_dest = porte.chambre_destination;
+    let zone_dest = porte.zone_destination;
+    let cout_pa = if gratuit { 0 } else { porte.cout_pa };
+    let cout_pv = if gratuit { 0 } else { porte.cout_pv };
+    let cote = porte.cote_mur;
+
+    if self.personnage.traverser_porte(cout_pa, cout_pv) {
+        self.personnage.chambre_actuelle = chambre_dest;
+        self.personnage.zone_actuelle = zone_dest;
+
+        println!("✅ Vous passez par la porte {} vers la chambre {} !", cote.etiquette(), chambre_dest + 1);
+        self.afficher_zone_actuelle();
     }
 }
 
@@ -641,14 +866,58 @@ fn traverser_porte(&mut self) {
         self.personnage.inventaire.afficher();
     }
 
+    fn verifier_conditions_fin(&mut self) {
+        if !self.personnage.est_vivant || self.personnage.pv <= 0 {
+            self.partie_terminee = true;
+            return;
+        }
+
+        let derniere_chambre = self.labyrinthe.chambres.len().saturating_sub(1);
+        if self.personnage.chambre_actuelle != derniere_chambre {
+            return;
+        }
+
+        let chambre_id = self.personnage.chambre_actuelle;
+        let zone_id = self.personnage.zone_actuelle;
+        let ennemi_bloquant = self.labyrinthe
+            .get_chambre(chambre_id)
+            .and_then(|chambre| chambre.get_zone(zone_id))
+            .and_then(|zone| zone.ennemi.as_ref())
+            .map_or(false, |ennemi| !ennemi.est_vaincu);
+
+        if !ennemi_bloquant {
+            println!("Vous trouvez enfin la sortie du labyrinthe.");
+            self.partie_terminee = true;
+        }
+    }
+
     fn fin_partie(&self) {
         println!("\n╔════════════════════════════════════════════╗");
-        if self.personnage.est_vivant {
+        let derniere_chambre = self.labyrinthe.chambres.len().saturating_sub(1);
+        let victoire = self.personnage.est_vivant
+            && self.personnage.chambre_actuelle == derniere_chambre;
+
+        if victoire {
+            let pa_utilises = self.personnage.points_action_max - self.personnage.points_action;
+            if self.personnage.pv > 12 && pa_utilises < 8 {
+                println!("║   VICTOIRE PARFAITE                     ║");
+                println!("║   Le trésor ancestral t'appartient.     ║");
+            } else if self.personnage.pv >= 6 {
+                println!("║   VICTOIRE STANDARD                     ║");
+                println!("║   Tu as survécu, mais à quel prix...    ║");
+            } else {
+                println!("║   VICTOIRE DIFFICILE                    ║");
+                println!("║   Tu t'es échappé de justesse.          ║");
+            }
+        } else if self.personnage.est_vivant {
             println!("║   PARTIE TERMINÉE                       ║");
         } else {
             println!("║   GAME OVER                               ║");
+            println!("║   Ton âme rejoint le labyrinthe.        ║");
         }
         println!("║   Tours joués: {:<24}  ║", self.tour);
+        println!("║   PV restants: {:<23}  ║", self.personnage.pv);
+        println!("║   PA restants: {:<23}  ║", self.personnage.points_action);
         println!("╚════════════════════════════════════════════╝\n");
     }
 }
