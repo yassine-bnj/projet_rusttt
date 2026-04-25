@@ -49,4 +49,14 @@ impl Porte {
             necessite_cle: false,
         }
     }
+
+    pub fn statut(&self) -> &'static str {
+        if self.est_verrouillee {
+            "verrouillee"
+        } else if self.necessite_cle {
+            "cle requise"
+        } else {
+            "ouverte"
+        }
+    }
 }

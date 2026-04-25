@@ -35,7 +35,7 @@ impl Zone {
     }
 
     pub fn afficher_contenu(&self, detaille: bool) {
-        println!("\n {}", self.nom);
+        println!("\n {} (#{})", self.nom, self.id + 1);
         println!("   {}\n", self.description);
 
         if let Some(ennemi) = &self.ennemi {

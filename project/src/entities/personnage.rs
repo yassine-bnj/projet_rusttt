@@ -93,6 +93,7 @@ impl Personnage {
         println!("----------------------------------\n");
     }
 
+    #[allow(dead_code)]
     pub fn deplacer_zone(&mut self, nouvelle_zone: usize) {
     // ✅ Déplacement entre zones : NE CONSOMME PAS DE PA
     self.zone_actuelle = nouvelle_zone;

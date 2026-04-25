@@ -31,7 +31,13 @@ impl Inventaire {
             println!("   (vide)");
         } else {
             for (i, objet) in self.objets.iter().enumerate() {
-                println!("   [{}] {} - {}", i + 1, objet.nom, objet.description);
+                println!(
+                    "   [{}] {} - {} (valeur: {})",
+                    i + 1,
+                    objet.nom,
+                    objet.description,
+                    objet.valeur
+                );
             }
         }
         println!();

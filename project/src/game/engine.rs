@@ -43,6 +43,12 @@ impl GameEngine {
     // ✅ Initialiser la position du joueur (Chambre 0, Zone 0)
     self.personnage.chambre_actuelle = 0;
     self.personnage.zone_actuelle = 0;
+    if let Some(chambre) = self.labyrinthe.get_chambre_mut(0) {
+        chambre.est_visitee = true;
+        if let Some(zone) = chambre.get_zone_mut(0) {
+            zone.est_visitee = true;
+        }
+    }
 
     self.labyrinthe.afficher_carte();
     self.personnage.afficher_statut();
@@ -77,7 +83,11 @@ fn afficher_chambre_matrice(&mut self) {
 
     if let Some(chambre) = self.labyrinthe.get_chambre(chambre_id) {
         println!("\n🏰 ──────────────────────────────────────────────");
-        println!("🏰  CHAMBRE {}: {}", chambre_id + 1, chambre.nom);
+        println!("🏰  CHAMBRE {}: {}", chambre.id + 1, chambre.nom);
+        println!("   {}", chambre.description);
+        if chambre.est_visitee {
+            println!("   Cette chambre a deja ete visitee.");
+        }
         println!("🏰 ───────────────────────────────────────────────\n");
         
         // Grille 4 colonnes x 3 rangées = 12 zones
@@ -157,6 +167,7 @@ fn afficher_chambre_matrice(&mut self) {
 }
 
 // fn afficher_deplacements_possibles(&self, chambre: &Chambre, zone_actuelle: usize) {
+#[allow(dead_code)]
 fn afficher_deplacements_possibles(&self, chambre: &Chambre, zone_actuelle: usize) {
     println!("\n🚶 DÉPLACEMENTS POSSIBLES :");
     println!("   ┌─────────────────────────────────┐");
@@ -222,8 +233,13 @@ fn afficher_deplacements_possibles(&self, chambre: &Chambre, zone_actuelle: usiz
 
     // Afficher les portes vers autres chambres
     for porte in &chambre.portes {
-        println!("   │  [P] Porte → Chambre {} (Coût: {} PA, {} PV) │", 
-                 porte.chambre_destination + 1, porte.cout_pa, porte.cout_pv);
+        println!(
+            "   │  [P] Porte → Chambre {} (Coût: {} PA, {} PV, {}) │",
+            porte.chambre_destination + 1,
+            porte.cout_pa,
+            porte.cout_pv,
+            porte.statut()
+        );
     }
 
     println!("   └─────────────────────────────────┘\n");
@@ -286,11 +302,12 @@ fn afficher_contenu_zone(&mut self) {
                     println!("\n🚪  Portes disponibles sur les murs :");
                     for porte in &chambre.portes {
                         println!(
-                            "   - {} → Chambre {} (Coût: {} PA, {} PV)",
+                            "   - {} → Chambre {} (Coût: {} PA, {} PV, {})",
                             porte.cote_mur.etiquette(),
                             porte.chambre_destination + 1,
                             porte.cout_pa,
-                            porte.cout_pv
+                            porte.cout_pv,
+                            porte.statut()
                         );
                     }
                     println!("   Tapez [p] pour choisir une porte");
@@ -788,7 +805,7 @@ fn choisir_porte_index(&self, chambre_id: usize) -> Option<usize> {
     println!("\n🚪 Choisis une porte par direction :");
     for porte in &chambre.portes {
         println!(
-            "   [{}] {} → Chambre {}",
+            "   [{}] {} → Chambre {} ({})",
             match porte.cote_mur {
                 CoteMur::Nord => "n",
                 CoteMur::Sud => "s",
@@ -796,7 +813,8 @@ fn choisir_porte_index(&self, chambre_id: usize) -> Option<usize> {
                 CoteMur::Ouest => "o",
             },
             porte.cote_mur.etiquette(),
-            porte.chambre_destination + 1
+            porte.chambre_destination + 1,
+            porte.statut()
         );
     }
     print!("\n> ");
@@ -844,6 +862,12 @@ fn traverser_porte_index(&mut self, porte_idx: usize, gratuit: bool) {
     if self.personnage.traverser_porte(cout_pa, cout_pv) {
         self.personnage.chambre_actuelle = chambre_dest;
         self.personnage.zone_actuelle = zone_dest;
+        if let Some(chambre) = self.labyrinthe.get_chambre_mut(chambre_dest) {
+            chambre.est_visitee = true;
+            if let Some(zone) = chambre.get_zone_mut(zone_dest) {
+                zone.est_visitee = true;
+            }
+        }
 
         println!("✅ Vous passez par la porte {} vers la chambre {} !", cote.etiquette(), chambre_dest + 1);
         self.afficher_zone_actuelle();
