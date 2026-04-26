@@ -48,16 +48,18 @@ impl Chambre {
         }
     }
 
-    pub fn generer_contenu(&mut self) {
+    pub fn generer_contenu(&mut self, autoriser_boss: bool) {
         use rand::Rng;
         let mut rng = rand::thread_rng();
         
         if rng.gen_bool(0.4) {
             let zone_index = rng.gen_range(0..self.zones.len());
-            let ennemi_type = match rng.gen_range(0..3) {
-                0 => TypeEnnemi::OmbreErrante,
-                1 => TypeEnnemi::GardienDePierre,
-                _ => TypeEnnemi::SpectreEnigmatique,
+            let ennemi_type = if autoriser_boss {
+                TypeEnnemi::SpectreEnigmatique
+            } else if rng.gen_bool(0.5) {
+                TypeEnnemi::OmbreErrante
+            } else {
+                TypeEnnemi::GardienDePierre
             };
             let ennemi = Ennemi::nouveau(ennemi_type);
             self.zones[zone_index].ajouter_ennemi(ennemi);

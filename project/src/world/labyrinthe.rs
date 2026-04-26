@@ -29,8 +29,9 @@ impl Labyrinthe {
 
     pub fn generer(&mut self) {
         // Générer contenu de chaque chambre
-        for chambre in &mut self.chambres {
-            chambre.generer_contenu();
+        let derniere_chambre = self.chambres.len().saturating_sub(1);
+        for (index, chambre) in self.chambres.iter_mut().enumerate() {
+            chambre.generer_contenu(index == derniere_chambre);
         }
 
         // Générer des portes entre chambres adjacentes, attachées aux murs
