@@ -52,11 +52,13 @@ impl Chambre {
         use rand::Rng;
         let mut rng = rand::thread_rng();
         
-        if rng.gen_bool(0.4) {
+        if autoriser_boss {
             let zone_index = rng.gen_range(0..self.zones.len());
-            let ennemi_type = if autoriser_boss {
-                TypeEnnemi::SpectreEnigmatique
-            } else if rng.gen_bool(0.5) {
+            let ennemi = Ennemi::nouveau(TypeEnnemi::SpectreEnigmatique);
+            self.zones[zone_index].ajouter_ennemi(ennemi);
+        } else if rng.gen_bool(0.4) {
+            let zone_index = rng.gen_range(0..self.zones.len());
+            let ennemi_type = if rng.gen_bool(0.5) {
                 TypeEnnemi::OmbreErrante
             } else {
                 TypeEnnemi::GardienDePierre
