@@ -859,6 +859,11 @@ fn traverser_porte_index(&mut self, porte_idx: usize, gratuit: bool) {
     let cout_pv = if gratuit { 0 } else { porte.cout_pv };
     let cote = porte.cote_mur;
 
+    if !gratuit && (porte.est_verrouillee || porte.necessite_cle) {
+        println!("🚫 Cette porte est {}. Utilisez une clé ou le crochetage de Rook.", porte.statut());
+        return;
+    }
+
     if self.personnage.traverser_porte(cout_pa, cout_pv) {
         self.personnage.chambre_actuelle = chambre_dest;
         self.personnage.zone_actuelle = zone_dest;
