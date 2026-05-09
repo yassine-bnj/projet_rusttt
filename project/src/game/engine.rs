@@ -352,65 +352,211 @@ fn combattre(&mut self) {
     let chambre_id = self.personnage.chambre_actuelle;
     let zone_id = self.personnage.zone_actuelle;
 
-    let est_spectre = self.labyrinthe
+    let derniere_chambre = self.labyrinthe.chambres.len().saturating_sub(1);
+
+    let type_ennemi = self.labyrinthe
         .get_chambre(chambre_id)
         .and_then(|chambre| chambre.get_zone(zone_id))
         .and_then(|zone| zone.ennemi.as_ref())
-        .map_or(false, |ennemi| {
-            !ennemi.est_vaincu
-                && ennemi.tipe == crate::entities::ennemi::TypeEnnemi::SpectreEnigmatique
-        });
+        .filter(|e| !e.est_vaincu)
+        .map(|e| e.tipe);
 
-    if est_spectre {
-        self.combattre_spectre();
+    match type_ennemi {
+        None => {
+            println!("❌ Il n'y a pas d'ennemi dans cette zone !");
+        }
+        Some(crate::entities::ennemi::TypeEnnemi::SpectreEnigmatique)
+            if chambre_id == derniere_chambre =>
+        {
+            self.combattre_spectre();
+        }
+        Some(crate::entities::ennemi::TypeEnnemi::OmbreErrante) => {
+            self.combattre_ombre();
+        }
+        Some(crate::entities::ennemi::TypeEnnemi::GardienDePierre) => {
+            self.combattre_gardien();
+        }
+        Some(_) => {
+            println!("❌ Vous ne pouvez pas combattre cet ennemi ici.");
+        }
+    }
+}
+
+fn combattre_ombre(&mut self) {
+    let chambre_id = self.personnage.chambre_actuelle;
+    let zone_id = self.personnage.zone_actuelle;
+
+    let nom_ennemi = self.labyrinthe
+        .get_chambre(chambre_id)
+        .and_then(|c| c.get_zone(zone_id))
+        .and_then(|z| z.ennemi.as_ref())
+        .map(|e| e.nom.clone())
+        .unwrap_or_default();
+
+    println!("\n👻 FACE À L'OMBRE : {}", nom_ennemi.to_uppercase());
+    println!("─────────────────────────────────────");
+    println!("Que faites-vous ?");
+    println!("  [1] Combattre  (-3 PV si vous perdez)");
+    println!("  [2] Fuir       (-1 PV, l'ennemi reste)");
+    println!("  [3] Donner un objet  (l'ombre disparaît)");
+    print!("> ");
+
+    let mut input = String::new();
+    std::io::stdin().read_line(&mut input).unwrap();
+
+    match input.trim() {
+        "1" => {
+            self.attaque_directe(chambre_id, zone_id);
+        }
+        "2" => {
+            self.personnage.subir_degats(1);
+            println!("🏃 Fuite ! -1 PV. L'ombre reste dans la zone.");
+        }
+        "3" => {
+            if self.offrir_objet_ombre(chambre_id, zone_id) {
+                println!("✨ L'ombre accepte votre offrande et disparaît.");
+            } else {
+                println!("❌ Vous n'avez pas d'objet à offrir.");
+            }
+        }
+        _ => {
+            println!("Hésitation ! L'ombre vous attaque.");
+            self.personnage.subir_degats(3);
+        }
+    }
+}
+
+fn combattre_gardien(&mut self) {
+    let chambre_id = self.personnage.chambre_actuelle;
+    let zone_id = self.personnage.zone_actuelle;
+
+    let nom_ennemi = self.labyrinthe
+        .get_chambre(chambre_id)
+        .and_then(|c| c.get_zone(zone_id))
+        .and_then(|z| z.ennemi.as_ref())
+        .map(|e| e.nom.clone())
+        .unwrap_or_default();
+
+    println!("\n🗿 FACE AU GARDIEN : {}", nom_ennemi.to_uppercase());
+    println!("─────────────────────────────────────");
+    println!("Que faites-vous ?");
+    println!("  [1] Combattre    (-5 PV si vous perdez)");
+    println!("  [2] Tribut       (perdre 2 PA, gardien laisse passer)");
+    println!("  [3] Contourner   (-2 PV, vous glissez autour)");
+    print!("> ");
+
+    let mut input = String::new();
+    std::io::stdin().read_line(&mut input).unwrap();
+
+    match input.trim() {
+        "1" => {
+            self.attaque_directe(chambre_id, zone_id);
+        }
+        "2" => {
+            if self.personnage.points_action >= 2 {
+                self.personnage.points_action -= 2;
+                if let Some(chambre) = self.labyrinthe.get_chambre_mut(chambre_id) {
+                    if let Some(zone) = chambre.get_zone_mut(zone_id) {
+                        if let Some(ennemi) = &mut zone.ennemi {
+                            ennemi.est_vaincu = true;
+                            zone.est_occupee = false;
+                        }
+                    }
+                }
+                println!("💰 Tribut payé (-2 PA). Le gardien s'écarte.");
+            } else {
+                println!("❌ Pas assez de PA pour payer le tribut !");
+            }
+        }
+        "3" => {
+            self.personnage.subir_degats(2);
+            println!("🤸 Contournement ! -2 PV. Le gardien reste.");
+        }
+        _ => {
+            println!("Hésitation ! Le gardien vous frappe.");
+            self.personnage.subir_degats(5);
+        }
+    }
+}
+
+fn attaque_directe(&mut self, chambre_id: usize, zone_id: usize) {
+    // Phase 1 : attaque du joueur, isolée pour libérer le borrow mut
+    let resultat = {
+        let chambre = self.labyrinthe.get_chambre_mut(chambre_id);
+        if let Some(chambre) = chambre {
+            if let Some(zone) = chambre.get_zone_mut(zone_id) {
+                if let Some(ennemi) = &mut zone.ennemi {
+                    println!("\n⚔️  COMBAT CONTRE {}", ennemi.nom.to_uppercase());
+                    println!("─────────────────────────────────────");
+                    let degats_joueur = 5;
+                    let vaincu = ennemi.subir_degats(degats_joueur);
+                    println!("💥 Vous infligez {} dégâts !", degats_joueur);
+                    if vaincu {
+                        zone.est_occupee = false;
+                        println!("✅ Ennemi vaincu !");
+                    }
+                    Some((vaincu, ennemi.attaquer(), ennemi.nom.clone(), ennemi.pv, ennemi.pv_max))
+                } else { None }
+            } else { None }
+        } else { None }
+    };
+
+    let (vaincu, degats_ennemi, nom_ennemi, ennemi_pv, ennemi_pv_max) = match resultat {
+        Some(r) => r,
+        None => return,
+    };
+
+    if vaincu {
         return;
     }
 
-    if let Some(chambre) = self.labyrinthe.get_chambre_mut(chambre_id) {
-        if let Some(zone) = chambre.get_zone_mut(zone_id) {
-            if let Some(ennemi) = &mut zone.ennemi {
-                if !ennemi.est_vaincu {
-                    println!("\n⚔️  COMBAT CONTRE {}", ennemi.nom.to_uppercase());
-                    println!("─────────────────────────────────────");
-                    
-                    // Joueur attaque
-                    let degats_joueur = 5; // À ajuster selon tes règles
-                    ennemi.subir_degats(degats_joueur);
-                    println!("💥 Vous infligez {} dégâts !", degats_joueur);
-                    
-                    if ennemi.est_vaincu {
-                        println!("✅ Ennemi vaincu !");
+    // Phase 2 : contre-attaque de l'ennemi (borrow mut libéré)
+    let bouclier_actif = self.personnage.inventaire.objets
+        .iter_mut()
+        .find(|o| o.tipe == crate::entities::objet::TypeObjet::BouclierSpectral && !o.est_utilise);
+
+    if let Some(bouclier) = bouclier_actif {
+        bouclier.utiliser();
+        println!("🛡️  Bouclier Spectral activé ! Attaque annulée !");
+    } else {
+        self.personnage.subir_degats(degats_ennemi);
+        println!("💥 {} vous inflige {} dégâts !", nom_ennemi, degats_ennemi);
+    }
+
+    println!("─────────────────────────────────────");
+    println!("❤️  Vos PV: {}/{}", self.personnage.pv, self.personnage.pv_max);
+    println!("🗡️  PV Ennemi: {}/{}", ennemi_pv, ennemi_pv_max);
+}
+
+fn offrir_objet_ombre(&mut self, chambre_id: usize, zone_id: usize) -> bool {
+    if self.personnage.inventaire.objets.is_empty() {
+        return false;
+    }
+
+    self.personnage.inventaire.afficher();
+    println!("Quel objet offrir ? (numéro)");
+    print!("> ");
+
+    let mut input = String::new();
+    std::io::stdin().read_line(&mut input).unwrap();
+    let choix = input.trim().parse::<usize>().ok()
+        .and_then(|n| n.checked_sub(1));
+
+    if let Some(index) = choix {
+        if index < self.personnage.inventaire.objets.len() {
+            self.personnage.inventaire.objets.remove(index);
+            if let Some(chambre) = self.labyrinthe.get_chambre_mut(chambre_id) {
+                if let Some(zone) = chambre.get_zone_mut(zone_id) {
+                    if let Some(ennemi) = &mut zone.ennemi {
+                        ennemi.est_vaincu = true;
                         zone.est_occupee = false;
-                    } else {
-                        // Ennemi contre-attaque
-                        let degats_ennemi = ennemi.attaquer();
-                        
-                        // Vérifier si bouclier spectral
-                        let bouclier_actif = self.personnage.inventaire.objets
-                            .iter_mut()
-                            .find(|o| o.tipe == crate::entities::objet::TypeObjet::BouclierSpectral 
-                                     && !o.est_utilise);
-                        
-                        if let Some(bouclier) = bouclier_actif {
-                            bouclier.utiliser();
-                            println!("🛡️  Bouclier Spectral activé ! Attaque annulée !");
-                        } else {
-                            self.personnage.subir_degats(degats_ennemi);
-                            println!("💥 {} vous inflige {} dégâts !", ennemi.nom, degats_ennemi);
-                        }
-                    }
-                    
-                    println!("─────────────────────────────────────");
-                    println!("❤️  Vos PV: {}/{}", self.personnage.pv, self.personnage.pv_max);
-                    if ennemi.tipe != crate::entities::ennemi::TypeEnnemi::SpectreEnigmatique {
-                        println!("🗡️  PV Ennemi: {}/{}", ennemi.pv, ennemi.pv_max);
                     }
                 }
-            } else {
-                println!("❌ Il n'y a pas d'ennemi dans cette zone !");
             }
+            return true;
         }
     }
+    false
 }
 
 fn utiliser_capacite_speciale(&mut self) {
@@ -631,31 +777,25 @@ fn fuir(&mut self) {
 
     if let Some(chambre) = self.labyrinthe.get_chambre(chambre_id) {
         if let Some(zone) = chambre.get_zone(zone_id) {
-            if zone.ennemi.is_some() {
-                // 50% de chance de fuir
-                use rand::Rng;
-                let mut rng = rand::thread_rng();
-                
-                if rng.gen_bool(0.5) {
-                    println!("✅ Vous avez réussi à fuir !");
-                    // Reculer d'une zone
-                    if zone_id > 0 {
-                        self.personnage.zone_actuelle = zone_id - 1;
-                    }
-                } else {
-                    println!("❌ Fuite échouée ! L'ennemi vous attaque !");
-                    if let Some(ennemi) = &zone.ennemi {
-                        let degats = ennemi.attaquer();
-                        self.personnage.subir_degats(degats);
-                        println!("💥 Vous subissez {} dégâts !", degats);
-                    }
+            if let Some(ennemi) = &zone.ennemi {
+                if ennemi.est_vaincu {
+                    println!("✅ L'ennemi est déjà vaincu, vous n'avez rien à fuir.");
+                    return;
                 }
+
+                // Ombre : fuite déterministe selon README => -1 PV, ennemi reste présent
+                // (On applique le coût quel que soit le type, mais sans déplacement aléatoire)
+                let cout = 1;
+                self.personnage.subir_degats(cout);
+                println!("🏃 Fuite réussie : -{} PV (l'ennemi reste).", cout);
+
             } else {
                 println!("❌ Il n'y a pas d'ennemi à fuir !");
             }
         }
     }
 }
+
 
 fn ramasser_objet(&mut self) {
     let chambre_id = self.personnage.chambre_actuelle;
