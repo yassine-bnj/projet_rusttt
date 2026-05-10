@@ -1060,15 +1060,19 @@ fn traverser_porte_index(&mut self, porte_idx: usize, gratuit: bool) {
             return;
         }
 
-        let chambre_id = self.personnage.chambre_actuelle;
-        let zone_id = self.personnage.zone_actuelle;
-        let boss_vaincu = self.labyrinthe
-            .get_chambre(chambre_id)
-            .and_then(|chambre| chambre.get_zone(zone_id))
-            .and_then(|zone| zone.ennemi.as_ref())
-            .map_or(true, |ennemi| ennemi.est_vaincu);
+        // Vérifier TOUTES les zones de la dernière chambre, pas seulement la zone actuelle
+        let boss_encore_vivant = self.labyrinthe
+            .get_chambre(derniere_chambre)
+            .map(|chambre| {
+                chambre.zones.iter().any(|zone| {
+                    zone.ennemi.as_ref().map_or(false, |e| !e.est_vaincu)
+                })
+            })
+            .unwrap_or(false);
 
-        if boss_vaincu {
+        if boss_encore_vivant {
+            println!("\n⚠️  Vous sentez une présence maléfique dans cette chambre...");
+        } else {
             println!("\n✨ Vous trouvez enfin la sortie du labyrinthe !");
             self.partie_terminee = true;
         }
