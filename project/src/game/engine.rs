@@ -9,6 +9,7 @@ pub struct GameEngine {
     pub labyrinthe: Labyrinthe,
     pub tour: i32,
     pub partie_terminee: bool,
+    pub objets_utilises: u32,
 }
 
 impl GameEngine {
@@ -18,6 +19,7 @@ impl GameEngine {
             labyrinthe,
             tour: 1,
             partie_terminee: false,
+            objets_utilises: 0,
         }
     }
 
@@ -517,6 +519,7 @@ fn attaque_directe(&mut self, chambre_id: usize, zone_id: usize) {
 
     if let Some(bouclier) = bouclier_actif {
         bouclier.utiliser();
+        self.objets_utilises += 1;
         println!("🛡️  Bouclier Spectral activé ! Attaque annulée !");
     } else {
         self.personnage.subir_degats(degats_ennemi);
@@ -681,12 +684,14 @@ fn utiliser_objet(&mut self) {
         crate::entities::objet::TypeObjet::PotionDeVie => {
             let soin = self.personnage.inventaire.objets[index].utiliser().unwrap_or(0);
             self.personnage.soigner(soin);
+            self.objets_utilises += 1;
             println!("Potion de Vie utilisée.");
         }
         crate::entities::objet::TypeObjet::CleMystique => {
             let chambre_id = self.personnage.chambre_actuelle;
             if let Some(porte_idx) = self.choisir_porte_index(chambre_id) {
                 self.personnage.inventaire.objets[index].utiliser();
+                self.objets_utilises += 1;
                 self.traverser_porte_index(porte_idx, true);
                 println!("Clé Mystique utilisée.");
             }
@@ -1037,56 +1042,77 @@ fn traverser_porte_index(&mut self, porte_idx: usize, gratuit: bool) {
 
     fn verifier_conditions_fin(&mut self) {
         if !self.personnage.est_vivant || self.personnage.pv <= 0 {
+            self.personnage.est_vivant = false;
             self.partie_terminee = true;
             return;
         }
 
         let derniere_chambre = self.labyrinthe.chambres.len().saturating_sub(1);
+
+        if self.personnage.points_action <= 0 && self.personnage.chambre_actuelle != derniere_chambre {
+            println!("❌ Vous n'avez plus de Points d'Action pour continuer. Vous êtes piégé...");
+            self.personnage.est_vivant = false;
+            self.partie_terminee = true;
+            return;
+        }
+
         if self.personnage.chambre_actuelle != derniere_chambre {
             return;
         }
 
         let chambre_id = self.personnage.chambre_actuelle;
         let zone_id = self.personnage.zone_actuelle;
-        let ennemi_bloquant = self.labyrinthe
+        let boss_vaincu = self.labyrinthe
             .get_chambre(chambre_id)
             .and_then(|chambre| chambre.get_zone(zone_id))
             .and_then(|zone| zone.ennemi.as_ref())
-            .map_or(false, |ennemi| !ennemi.est_vaincu);
+            .map_or(true, |ennemi| ennemi.est_vaincu);
 
-        if !ennemi_bloquant {
-            println!("Vous trouvez enfin la sortie du labyrinthe.");
+        if boss_vaincu {
+            println!("\n✨ Vous trouvez enfin la sortie du labyrinthe !");
             self.partie_terminee = true;
         }
     }
 
     fn fin_partie(&self) {
-        println!("\n╔════════════════════════════════════════════╗");
         let derniere_chambre = self.labyrinthe.chambres.len().saturating_sub(1);
         let victoire = self.personnage.est_vivant
             && self.personnage.chambre_actuelle == derniere_chambre;
+        let pa_utilises = self.personnage.points_action_max - self.personnage.points_action;
+
+        let classe_nom = match self.personnage.classe {
+            crate::entities::personnage::ClassePersonnage::Kael   => "Kael — Le Chercheur",
+            crate::entities::personnage::ClassePersonnage::Seraph => "Seraph — La Guerrière",
+            crate::entities::personnage::ClassePersonnage::Rook   => "Rook — Le Voleur",
+        };
+
+        println!("\n╔══════════════════════════════════════════════╗");
 
         if victoire {
-            let pa_utilises = self.personnage.points_action_max - self.personnage.points_action;
             if self.personnage.pv > 12 && pa_utilises < 8 {
-                println!("║   VICTOIRE PARFAITE                     ║");
-                println!("║   Le trésor ancestral t'appartient.     ║");
+                println!("║        ★  VICTOIRE PARFAITE  ★             ║");
+                println!("║   Le trésor ancestral t'appartient.        ║");
             } else if self.personnage.pv >= 6 {
-                println!("║   VICTOIRE STANDARD                     ║");
-                println!("║   Tu as survécu, mais à quel prix...    ║");
+                println!("║           VICTOIRE STANDARD                ║");
+                println!("║   Tu as survécu, mais à quel prix...       ║");
             } else {
-                println!("║   VICTOIRE DIFFICILE                    ║");
-                println!("║   Tu t'es échappé de justesse.          ║");
+                println!("║           VICTOIRE DIFFICILE               ║");
+                println!("║   Tu t'es échappé de justesse.             ║");
             }
-        } else if self.personnage.est_vivant {
-            println!("║   PARTIE TERMINÉE                       ║");
         } else {
-            println!("║   GAME OVER                               ║");
-            println!("║   Ton âme rejoint le labyrinthe.        ║");
+            println!("║              GAME OVER                     ║");
+            println!("║   Ton âme rejoint le labyrinthe.           ║");
         }
-        println!("║   Tours joués: {:<24}  ║", self.tour);
-        println!("║   PV restants: {:<23}  ║", self.personnage.pv);
-        println!("║   PA restants: {:<23}  ║", self.personnage.points_action);
-        println!("╚════════════════════════════════════════════╝\n");
+
+        println!("╠══════════════════════════════════════════════╣");
+        println!("║  Personnage : {:<31}║", classe_nom);
+        println!("║  Nom        : {:<31}║", self.personnage.nom);
+        println!("╠══════════════════════════════════════════════╣");
+        println!("║  PV restants   : {:<28}║", format!("{}/{}", self.personnage.pv, self.personnage.pv_max));
+        println!("║  PA restants   : {:<28}║", format!("{}/{}", self.personnage.points_action, self.personnage.points_action_max));
+        println!("║  PA utilisés   : {:<28}║", pa_utilises);
+        println!("║  Tours joués   : {:<28}║", self.tour - 1);
+        println!("║  Objets utilisés: {:<27}║", self.objets_utilises);
+        println!("╚══════════════════════════════════════════════╝\n");
     }
 }
