@@ -8,7 +8,7 @@ pub enum TypeEnnemi {
 #[derive(Debug, Clone)]
 pub struct Ennemi {
     pub nom: String,
-    pub tipe: TypeEnnemi,
+    pub type_ennemi: TypeEnnemi,
     pub pv: i32,
     pub pv_max: i32,
     pub degats: i32,
@@ -19,11 +19,11 @@ pub struct Ennemi {
 }
 
 impl Ennemi {
-    pub fn nouveau(tipe: TypeEnnemi) -> Self {
-        match tipe {
+    pub fn nouveau(type_ennemi: TypeEnnemi) -> Self {
+        match type_ennemi {
             TypeEnnemi::OmbreErrante => Ennemi {
                 nom: "Ombre Errante".to_string(),
-                tipe,
+                type_ennemi,
                 pv: 10,
                 pv_max: 10,
                 degats: 3,
@@ -34,7 +34,7 @@ impl Ennemi {
             },
             TypeEnnemi::GardienDePierre => Ennemi {
                 nom: "Gardien de Pierre".to_string(),
-                tipe,
+                type_ennemi,
                 pv: 20,
                 pv_max: 20,
                 degats: 5,
@@ -45,7 +45,7 @@ impl Ennemi {
             },
             TypeEnnemi::SpectreEnigmatique => Ennemi {
                 nom: "Spectre Énigmatique".to_string(),
-                tipe,
+                type_ennemi,
                 pv: 999,
                 pv_max: 999,
                 degats: 8,
@@ -66,7 +66,7 @@ impl Ennemi {
     }
 
     pub fn subir_degats(&mut self, degats: i32) -> bool {
-        if self.tipe == TypeEnnemi::SpectreEnigmatique {
+        if self.type_ennemi == TypeEnnemi::SpectreEnigmatique {
             return false;
         }
         
@@ -82,7 +82,7 @@ impl Ennemi {
     pub fn afficher(&self) {
         println!("\n  ────────────────────────────");
         println!("  ENNEMI: {}", self.nom);
-        if self.tipe != TypeEnnemi::SpectreEnigmatique {
+        if self.type_ennemi != TypeEnnemi::SpectreEnigmatique {
             println!("  PV: {}/{}", self.pv, self.pv_max);
         }
         println!("  Dégâts: -{} PV", self.degats);

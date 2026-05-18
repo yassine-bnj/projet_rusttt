@@ -101,7 +101,7 @@ fn afficher_chambre_matrice(&mut self) {
                             "  💀  "  // Ennemi vaincu
                         }
                     } else if let Some(objet) = &zone.objet {
-                        match objet.tipe {
+                        match objet.type_objet {
                             crate::entities::objet::TypeObjet::PotionDeVie => "  🧪  ",
                             crate::entities::objet::TypeObjet::CleMystique => "  🔑  ",
                             crate::entities::objet::TypeObjet::BouclierSpectral => "  🛡️  ",
@@ -250,7 +250,7 @@ fn combattre(&mut self) {
         .and_then(|chambre| chambre.get_zone(zone_id))
         .and_then(|zone| zone.ennemi.as_ref())
         .filter(|e| !e.est_vaincu)
-        .map(|e| e.tipe);
+        .map(|e| e.type_ennemi);
 
     match type_ennemi {
         None => {
@@ -404,7 +404,7 @@ fn attaque_directe(&mut self, chambre_id: usize, zone_id: usize) {
     // Phase 2 : contre-attaque de l'ennemi (borrow mut libéré)
     let bouclier_actif = self.personnage.inventaire.objets
         .iter_mut()
-        .find(|o| o.tipe == crate::entities::objet::TypeObjet::BouclierSpectral && !o.est_utilise);
+        .find(|o| o.type_objet == crate::entities::objet::TypeObjet::BouclierSpectral && !o.est_utilise);
 
     if let Some(bouclier) = bouclier_actif {
         bouclier.utiliser();
@@ -567,9 +567,9 @@ fn utiliser_objet(&mut self) {
         return;
     }
 
-    let tipe = self.personnage.inventaire.objets[index].tipe;
+    let type_objet = self.personnage.inventaire.objets[index].type_objet;
 
-    match tipe {
+    match type_objet {
         crate::entities::objet::TypeObjet::PotionDeVie => {
             let soin = self.personnage.inventaire.objets[index].utiliser().unwrap_or(0);
             self.personnage.soigner(soin);

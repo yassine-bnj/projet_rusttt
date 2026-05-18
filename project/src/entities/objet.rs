@@ -8,7 +8,7 @@ pub enum TypeObjet {
 #[derive(Debug, Clone)]
 pub struct Objet {
     pub nom: String,
-    pub tipe: TypeObjet,
+    pub type_objet: TypeObjet,
     pub description: String,
     pub valeur: i32,
     pub utilisations_restantes: i32,
@@ -16,10 +16,10 @@ pub struct Objet {
 }
 
 impl Objet {
-    pub fn nouveau(nom: &str, tipe: TypeObjet, description: &str, valeur: i32) -> Self {
+    pub fn nouveau(nom: &str, type_objet: TypeObjet, description: &str, valeur: i32) -> Self {
         Objet {
             nom: nom.to_string(),
-            tipe,
+            type_objet,
             description: description.to_string(),
             valeur,
             utilisations_restantes: 1,
@@ -63,7 +63,7 @@ impl Objet {
             self.est_utilise = true;
         }
 
-        match self.tipe {
+        match self.type_objet {
             TypeObjet::PotionDeVie => Some(5),
             TypeObjet::CleMystique => Some(0),
             TypeObjet::BouclierSpectral => Some(0),
