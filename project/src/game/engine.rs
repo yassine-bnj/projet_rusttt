@@ -1,7 +1,6 @@
 use crate::entities::personnage::Personnage;
 use crate::entities::personnage::ClassePersonnage;
 use crate::world::labyrinthe::Labyrinthe;
-use crate::world::chambre::Chambre;
 use crate::world::porte::CoteMur;
 
 pub struct GameEngine {
@@ -23,20 +22,6 @@ impl GameEngine {
         }
     }
 
-    // pub fn demarrer(&mut self) {
-    //     println!("\n╔════════════════════════════════════════════╗");
-    //     println!("║   LE LABYRINTHE DES ÂMES PERDUES          ║");
-    //     println!("╚════════════════════════════════════════════╝\n");
-
-    //     self.labyrinthe.afficher_carte();
-    //     self.personnage.afficher_statut();
-
-    //     while !self.partie_terminee && self.personnage.est_vivant {
-    //         self.tour_actuel();
-    //     }
-
-    //     self.fin_partie();
-    // }
     pub fn demarrer(&mut self) {
     println!("\n╔════════════════════════════════════════════╗");
     println!("║   LE LABYRINTHE DES ÂMES PERDUES          ║");
@@ -167,102 +152,6 @@ fn afficher_chambre_matrice(&mut self) {
         println!();
     }
 }
-
-// fn afficher_deplacements_possibles(&self, chambre: &Chambre, zone_actuelle: usize) {
-#[allow(dead_code)]
-fn afficher_deplacements_possibles(&self, chambre: &Chambre, zone_actuelle: usize) {
-    println!("\n🚶 DÉPLACEMENTS POSSIBLES :");
-    println!("   ┌─────────────────────────────────┐");
-
-    let colonne = zone_actuelle % 4;
-    let ligne = zone_actuelle / 4;
-
-    // Nord
-    if ligne > 0 {
-        let zone_nord = zone_actuelle - 4;
-        if let Some(z) = chambre.get_zone(zone_nord) {
-            if z.est_occupee && z.ennemi.as_ref().map_or(false, |e| !e.est_vaincu) {
-                println!("   │  [N] Nord  → Zone {} ⚔️  (Ennemi)  │", zone_nord + 1);
-            } else {
-                println!("   │  [N] Nord  → Zone {}              │", zone_nord + 1);
-            }
-        }
-    } else {
-        println!("   │  [N] Nord  → 🚫 Mur                   │");
-    }
-
-    // Sud
-    if ligne < 2 {
-        let zone_sud = zone_actuelle + 4;
-        if let Some(z) = chambre.get_zone(zone_sud) {
-            if z.est_occupee && z.ennemi.as_ref().map_or(false, |e| !e.est_vaincu) {
-                println!("   │  [S] Sud   → Zone {} ⚔️  (Ennemi)  │", zone_sud + 1);
-            } else {
-                println!("   │  [S] Sud   → Zone {}              │", zone_sud + 1);
-            }
-        }
-    } else {
-        println!("   │  [S] Sud   → 🚫 Mur                   │");
-    }
-
-    // Ouest
-    if colonne > 0 {
-        let zone_ouest = zone_actuelle - 1;
-        if let Some(z) = chambre.get_zone(zone_ouest) {
-            if z.est_occupee && z.ennemi.as_ref().map_or(false, |e| !e.est_vaincu) {
-                println!("   │  [O] Ouest → Zone {} ⚔️  (Ennemi)  │", zone_ouest + 1);
-            } else {
-                println!("   │  [O] Ouest → Zone {}              │", zone_ouest + 1);
-            }
-        }
-    } else {
-        println!("   │  [O] Ouest → 🚫 Mur                   │");
-    }
-
-    // Est
-    if colonne < 3 {
-        let zone_est = zone_actuelle + 1;
-        if let Some(z) = chambre.get_zone(zone_est) {
-            if z.est_occupee && z.ennemi.as_ref().map_or(false, |e| !e.est_vaincu) {
-                println!("   │  [E] Est   → Zone {} ⚔️  (Ennemi)  │", zone_est + 1);
-            } else {
-                println!("   │  [E] Est   → Zone {}              │", zone_est + 1);
-            }
-        }
-    } else {
-        println!("   │  [E] Est   → 🚫 Mur                   │");
-    }
-
-    // Afficher les portes vers autres chambres
-    for porte in &chambre.portes {
-        println!(
-            "   │  [P] Porte → Chambre {} (Coût: {} PA, {} PV, {}) │",
-            porte.chambre_destination + 1,
-            porte.cout_pa,
-            porte.cout_pv,
-            porte.statut()
-        );
-    }
-
-    println!("   └─────────────────────────────────┘\n");
-}
-
-    // fn tour_actuel(&mut self) {
-    //     println!("\n━━━ TOUR {} ━━━\n", self.tour);
-        
-    //     let chambre_id = self.personnage.chambre_actuelle;
-    //     let zone_id = self.personnage.zone_actuelle;
-
-    //     if let Some(chambre) = self.labyrinthe.get_chambre(chambre_id) {
-    //         if let Some(zone) = chambre.get_zone(zone_id) {
-    //             zone.afficher_contenu(false);
-    //         }
-    //     }
-
-    //     self.personnage.afficher_statut();
-    //     self.gerer_input();
-    //     self.tour += 1;
-    // }
 
     fn tour_actuel(&mut self) {
     println!("\n━━━ TOUR {} ━━━\n", self.tour);
@@ -820,34 +709,6 @@ fn ramasser_objet(&mut self) {
         }
     }
 }
-
-    // fn gerer_input(&mut self) {
-    //     println!("Commands: [n/s/e/o] déplacer | [r] regarder | [i] inventaire | [q] quitter");
-    //     print!("> ");
-        
-    //     let mut input = String::new();
-    //     std::io::stdin().read_line(&mut input).unwrap();
-    //     let input = input.trim().to_lowercase();
-
-    //     match input.as_str() {
-    //         "n" | "s" | "e" | "o" => self.deplacer(),
-    //         "r" => self.regarder(),
-    //         "i" => self.afficher_inventaire(),
-    //         "q" => self.partie_terminee = true,
-    //         _ => println!("Commande inconnue."),
-    //     }
-    // }
-
-    // fn deplacer(&mut self) {
-    //     if self.personnage.points_action <= 0 {
-    //         println!(" Pas assez de points d'action !");
-    //         return;
-    //     }
-
-    //     println!(" Vous vous déplacez...");
-    //     self.personnage.points_action -= 1;
-    //     self.personnage.zone_actuelle = (self.personnage.zone_actuelle + 1) % 12;
-    // }
 
     fn deplacer(&mut self, direction: &str) {
     let chambre_id = self.personnage.chambre_actuelle;
