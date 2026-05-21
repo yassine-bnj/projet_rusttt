@@ -51,30 +51,44 @@ impl Chambre {
     pub fn generer_contenu(&mut self, autoriser_boss: bool) {
         use rand::Rng;
         let mut rng = rand::thread_rng();
-        
+
         if autoriser_boss {
             let zone_index = rng.gen_range(0..self.zones.len());
-            let ennemi = Ennemi::nouveau(TypeEnnemi::SpectreEnigmatique);
-            self.zones[zone_index].ajouter_ennemi(ennemi);
-        } else if rng.gen_bool(0.4) {
+            self.zones[zone_index].ajouter_ennemi(Ennemi::nouveau(TypeEnnemi::SpectreEnigmatique));
+            // La dernière chambre a aussi toujours un objet
+            let zone_objet = rng.gen_range(0..self.zones.len());
+            self.zones[zone_objet].ajouter_objet(Self::objet_aleatoire(&mut rng));
+            return;
+        }
+
+        // Probabilités augmentées pour éviter les chambres vides
+        let a_ennemi = rng.gen_bool(0.70);
+        let a_objet  = rng.gen_bool(0.60);
+
+        // Garantir au moins un contenu par chambre
+        let forcer_objet = !a_ennemi && !a_objet;
+
+        if a_ennemi {
             let zone_index = rng.gen_range(0..self.zones.len());
             let ennemi_type = if rng.gen_bool(0.5) {
                 TypeEnnemi::OmbreErrante
             } else {
                 TypeEnnemi::GardienDePierre
             };
-            let ennemi = Ennemi::nouveau(ennemi_type);
-            self.zones[zone_index].ajouter_ennemi(ennemi);
+            self.zones[zone_index].ajouter_ennemi(Ennemi::nouveau(ennemi_type));
         }
 
-        if rng.gen_bool(0.3) {
+        if a_objet || forcer_objet {
             let zone_index = rng.gen_range(0..self.zones.len());
-            let objet = match rng.gen_range(0..3) {
-                0 => Objet::potion_de_vie(),
-                1 => Objet::cle_mystique(),
-                _ => Objet::bouclier_spectral(),
-            };
-            self.zones[zone_index].ajouter_objet(objet);
+            self.zones[zone_index].ajouter_objet(Self::objet_aleatoire(&mut rng));
+        }
+    }
+
+    fn objet_aleatoire(rng: &mut impl rand::Rng) -> Objet {
+        match rng.gen_range(0..3) {
+            0 => Objet::potion_de_vie(),
+            1 => Objet::cle_mystique(),
+            _ => Objet::bouclier_spectral(),
         }
     }
 
